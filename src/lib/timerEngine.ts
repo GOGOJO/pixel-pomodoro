@@ -83,7 +83,6 @@ function nextAfter(s: TimerState, cfg: TimerConfig, completedFocus: boolean): { 
 }
 
 function enterPhase(
-  s: TimerState,
   cfg: TimerConfig,
   next: { phase: Phase; cycleCount: number },
   run: boolean,
@@ -103,7 +102,7 @@ function enterPhase(
 /** Moves to the next phase without counting the current one as completed. */
 export function skip(s: TimerState, cfg: TimerConfig, now: number): TimerState {
   const keepRunning = s.status === "running" && cfg.autoAdvance;
-  return enterPhase(s, cfg, nextAfter(s, cfg, false), keepRunning, now);
+  return enterPhase(cfg, nextAfter(s, cfg, false), keepRunning, now);
 }
 
 /**
@@ -120,7 +119,7 @@ export function advance(
   for (let i = 0; i < 64 && cur.status === "running" && cur.endsAt !== null && cur.endsAt <= now; i++) {
     const endedAt = cur.endsAt;
     completed.push({ phase: cur.phase, durationMs: cur.phaseDurationMs, endedAt });
-    cur = enterPhase(cur, cfg, nextAfter(cur, cfg, true), cfg.autoAdvance, endedAt);
+    cur = enterPhase(cfg, nextAfter(cur, cfg, true), cfg.autoAdvance, endedAt);
   }
   return { state: cur, completed };
 }

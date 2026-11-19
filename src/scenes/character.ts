@@ -184,6 +184,30 @@ function frame(look: CharacterLook, pose: Pose, blink: boolean, headDy: number, 
   });
 }
 
+/** A side-view chair positioned to sit under a character whose hands are at (handX, handY). */
+export function drawChair(
+  ctx: Ctx,
+  handX: number,
+  handY: number,
+  c: { ink: string; base: string; light: string; back?: number },
+) {
+  const x = handX - HAND_X + 1;
+  const seatY = handY - HAND_Y + 26;
+  const floorY = handY - HAND_Y + 33;
+  const backH = c.back ?? 20;
+  ctx.fillStyle = c.ink;
+  ctx.fillRect(x, seatY - backH, 4, backH + 2);
+  ctx.fillRect(x, seatY, 20, 4);
+  ctx.fillRect(x + 1, seatY + 4, 2, floorY - seatY - 3);
+  ctx.fillRect(x + 16, seatY + 4, 2, floorY - seatY - 3);
+  ctx.fillStyle = c.base;
+  ctx.fillRect(x + 1, seatY - backH + 1, 2, backH);
+  ctx.fillRect(x + 1, seatY + 1, 18, 2);
+  ctx.fillStyle = c.light;
+  ctx.fillRect(x + 1, seatY - backH + 1, 1, backH);
+  ctx.fillRect(x + 1, seatY + 1, 18, 1);
+}
+
 export interface DrawCharacterOpts {
   look: CharacterLook;
   activity: Activity;

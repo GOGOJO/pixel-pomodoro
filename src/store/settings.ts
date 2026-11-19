@@ -17,6 +17,7 @@ export interface Settings extends TimerConfig {
   appearance: Appearance;
   lighting: SceneLighting;
   showSidebar: boolean;
+  unlockAll: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,7 +35,11 @@ export const DEFAULT_SETTINGS: Settings = {
   appearance: "system",
   lighting: "auto",
   showSidebar: true,
+  unlockAll: false,
 };
+
+/** Completed focus sessions needed before a scene can be picked. */
+export const SCENE_UNLOCKS: Record<SceneId, number> = { bedroom: 0, cabin: 2, cafe: 5, city: 10 };
 
 interface SettingsStore extends Settings {
   update: (patch: Partial<Settings>) => void;

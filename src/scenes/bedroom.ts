@@ -1,4 +1,4 @@
-import { drawCat, drawCharacter, type CharacterLook } from "./character";
+import { drawCat, drawChair, drawCharacter, type CharacterLook } from "./character";
 import {
   bands, circle, dither, hash, hline, px, rain, rect, rng, steam, vline,
   type Ctx, type SceneDef, type SceneEnv, type TimeOfDay,
@@ -260,12 +260,7 @@ function bed(ctx: Ctx) {
 
 function desk(ctx: Ctx) {
   // Chair (behind the character).
-  rect(ctx, 199, 106, 3, 26, C.ink);
-  rect(ctx, 200, 107, 1, 24, C.woodLight);
-  rect(ctx, 199, 120, 22, 3, C.ink);
-  rect(ctx, 200, 120, 20, 2, C.wood);
-  vline(ctx, 201, 123, 8, C.ink);
-  vline(ctx, 218, 123, 8, C.ink);
+  drawChair(ctx, HAND.x, HAND.y, { ink: C.ink, base: C.wood, light: C.woodLight });
   // Shelf with books and a trailing plant.
   rect(ctx, 236, 66, 70, 3, C.woodDark);
   hline(ctx, 236, 66, 70, C.woodLight);

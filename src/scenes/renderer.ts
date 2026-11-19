@@ -63,8 +63,8 @@ function build(scene: SceneDef, env: SceneEnv): Layers {
   const night = env.tod !== "day";
   for (const l of lights) {
     if (l.nightOnly && !night) continue;
-    const strength = night ? 1 : 0.45;
-    stepped(g, l, 4, (i) => (0.05 + i * 0.03) * strength, l.color);
+    const strength = night ? 1 : 0.35;
+    stepped(g, l, 4, (i) => (0.025 + i * 0.022) * strength, l.color);
   }
 
   return { back, front, fore, mask, glow, lights };
