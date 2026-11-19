@@ -22,8 +22,12 @@
         "center": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 16, "y": 22 },
-        "backgroundColor": "#1a1424"
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 22
+        },
+        "backgroundColor": "#1a1424",
+        "backgroundThrottling": "disabled"
       }
     ],
     "security": {
@@ -32,7 +36,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "category": "Productivity",
     "shortDescription": "A cozy pixel-art Pomodoro timer",
     "longDescription": "Pixel Pomodoro is an offline focus timer set inside tiny animated pixel-art worlds: a rainy bedroom, a forest cabin, a quiet café and a night city.",
@@ -47,10 +54,20 @@
     "macOS": {
       "minimumSystemVersion": "11.0",
       "dmg": {
-        "windowSize": { "width": 600, "height": 380 },
-        "appPosition": { "x": 160, "y": 190 },
-        "applicationFolderPosition": { "x": 440, "y": 190 }
-      }
+        "windowSize": {
+          "width": 600,
+          "height": 380
+        },
+        "appPosition": {
+          "x": 160,
+          "y": 190
+        },
+        "applicationFolderPosition": {
+          "x": 440,
+          "y": 190
+        }
+      },
+      "signingIdentity": "-"
     }
   }
 }

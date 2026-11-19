@@ -1,0 +1,67 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx vite build
+
+  macos:
+    name: macOS app (Apple Silicon)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - name: Build .app and .dmg
+        run: npm run app:build:mac
+      - name: Smoke test the bundled app
+        run: |
+          APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Pixel Pomodoro.app"
+          test -d "$APP"
+          file "$APP/Contents/MacOS/pixel-pomodoro" | tee /dev/stderr | grep -q arm64
+          codesign --verify --verbose "$APP"
+          plutil -p "$APP/Contents/Info.plist" | grep -E "CFBundleIdentifier|LSMinimumSystemVersion|CFBundleIconFile"
+          "$APP/Contents/MacOS/pixel-pomodoro" &
+          PID=$!
+          sleep 15
+          if kill -0 $PID 2>/dev/null; then echo "App is running"; kill $PID; else echo "App exited early"; exit 1; fi
+      - name: Package .app as zip
+        run: |
+          cd src-tauri/target/aarch64-apple-darwin/release/bundle/macos
+          ditto -c -k --keepParent "Pixel Pomodoro.app" "Pixel-Pomodoro-macOS-arm64.app.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Pomodoro-macOS-arm64
+          path: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.zip
+          if-no-files-found: error
