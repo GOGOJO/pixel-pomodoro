@@ -46,30 +46,32 @@ Macs aren't supported yet.
 
 ### 1. Download the app
 
-Every push to `main` builds the app on GitHub Actions.
+**[⬇ Download Pixel-Pomodoro-macOS-arm64.dmg](https://github.com/GOGOJO/pixel-pomodoro/releases/latest/download/Pixel-Pomodoro-macOS-arm64.dmg)**
 
-1. Open the [**Build** workflow runs](https://github.com/GOGOJO/pixel-pomodoro/actions/workflows/build.yml?query=branch%3Amain) and
-   click the most recent run with a green check mark.
-2. Scroll to **Artifacts** at the bottom of the run page and click
-   **Pixel-Pomodoro-macOS-arm64** to download a zip.
-3. Double-click the zip. It contains `dmg/Pixel Pomodoro_1.0.0_aarch64.dmg` (the installer) and
-   `macos/Pixel-Pomodoro-macOS-arm64.app.zip` (the bare app, if you'd rather skip the
-   installer).
+That link always points to the newest release. You can also browse every version and its
+release notes on the [Releases page](https://github.com/GOGOJO/pixel-pomodoro/releases). If
+you'd rather skip the installer, each release also has `Pixel-Pomodoro-macOS-arm64.app.zip`,
+the bare app: unzip it and move it into Applications.
 
-You need to be signed in to GitHub with access to this repository to download artifacts, and
-GitHub deletes them 90 days after a run. If the newest run is older than that, open the
-**Build** workflow and click **Run workflow** to make a fresh build.
+<details>
+<summary>Want the very latest, unreleased build?</summary>
 
-With the [GitHub CLI](https://cli.github.com/) you can download the latest build into the
-current folder in one step:
+Every push to `main` also builds the app on GitHub Actions. Open the
+[**Build** workflow runs](https://github.com/GOGOJO/pixel-pomodoro/actions/workflows/build.yml?query=branch%3Amain),
+click the most recent run with a green check mark, and download
+**Pixel-Pomodoro-macOS-arm64** under **Artifacts** (you need to be signed in to GitHub). The
+zip contains `dmg/Pixel Pomodoro_<version>_aarch64.dmg` and the bare app. Or, with the
+[GitHub CLI](https://cli.github.com/):
 
 ```bash
 gh run download --repo GOGOJO/pixel-pomodoro --name Pixel-Pomodoro-macOS-arm64
 ```
 
+</details>
+
 ### 2. Install it
 
-1. Double-click `Pixel Pomodoro_1.0.0_aarch64.dmg`.
+1. Double-click `Pixel-Pomodoro-macOS-arm64.dmg`.
 2. Drag **Pixel Pomodoro** onto the **Applications** folder in the window that opens.
 3. Eject the disk image (the ⏏ button next to it in Finder's sidebar).
 
@@ -95,7 +97,7 @@ closed.
 
 ### Updating and uninstalling
 
-- **Update**: download the newest build and drag it into Applications again, replacing the old
+- **Update**: download the newest release and drag it into Applications again, replacing the old
   copy. Your tasks, settings and history are kept.
 - **Uninstall**: drag the app to the Trash. To also delete your data, remove
   `~/Library/Application Support/app.pixelpomodoro.desktop/`.
@@ -139,6 +141,17 @@ Outputs (no dev server needed; all assets are embedded):
 
 The GitHub Actions workflow (`.github/workflows/build.yml`) builds both on an Apple Silicon
 runner, launches the app as a smoke test and uploads the DMG and a zipped `.app` as artifacts.
+
+To publish a release, bump `version` in `src-tauri/tauri.conf.json` (and `package.json`), merge
+to `main`, then push a matching tag:
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+The workflow checks that the tag matches the app version, builds the app and attaches
+`Pixel-Pomodoro-macOS-arm64.dmg` and `Pixel-Pomodoro-macOS-arm64.app.zip` to a new GitHub
+release.
 
 The bundle is ad-hoc signed, not notarized, so downloaded copies need the first-launch steps in
 [Download and install](#3-open-it-the-first-time). To distribute it more widely, set

@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -28,8 +29,15 @@ jobs:
   macos:
     name: macOS app (Apple Silicon)
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Check tag matches app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          test "${GITHUB_REF_NAME}" = "v${VERSION}" || { echo "Tag ${GITHUB_REF_NAME} does not match version ${VERSION}"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -65,3 +73,22 @@ jobs:
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
             src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.zip
           if-no-files-found: error
+      - name: Prepare release files
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir release
+          cp src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg release/Pixel-Pomodoro-macOS-arm64.dmg
+          cp src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Pixel-Pomodoro-macOS-arm64.app.zip release/
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Pixel Pomodoro ${{ github.ref_name }}
+          body: |
+            For Apple Silicon Macs (M1 or newer) on macOS 11 or later.
+
+            Download **Pixel-Pomodoro-macOS-arm64.dmg**, open it and drag Pixel Pomodoro into Applications.
+            The app isn't notarized, so the first launch needs one extra step: see
+            [Open it the first time](https://github.com/GOGOJO/pixel-pomodoro#3-open-it-the-first-time).
+          generate_release_notes: true
+          files: release/*
