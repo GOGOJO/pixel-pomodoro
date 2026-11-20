@@ -3,6 +3,22 @@
 A cozy, offline Pomodoro timer for macOS, set inside tiny animated pixel-art worlds.
 Built with **Tauri 2**, **React**, **TypeScript**, **Vite**, **Tailwind CSS** and **Zustand**.
 
+![Pixel Pomodoro running a focus session in the Rainy Bedroom](docs/screenshots/bedroom.png)
+
+## Screenshots
+
+| Forest Cabin (night) | Sakura Café (day) |
+| --- | --- |
+| ![Forest Cabin world at night](docs/screenshots/cabin.png) | ![Sakura Café world during the day](docs/screenshots/cafe.png) |
+| **Night City** | **Choosing a world** |
+| ![Night City world](docs/screenshots/city.png) | ![World picker showing all four worlds](docs/screenshots/worlds.png) |
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="Settings panel with timer, sound and appearance options" width="60%" />
+</p>
+
+## Features
+
 - **Four worlds**: a rainy bedroom, a forest cabin with a crackling fire, a sakura café and a
   night-city apartment. Each one has its own palette, ambient animation and day / dusk / night
   lighting that follows your clock. New worlds unlock as you complete pomodoros. You can turn this
@@ -22,6 +38,67 @@ Built with **Tauri 2**, **React**, **TypeScript**, **Vite**, **Tailwind CSS** an
 - **Native macOS integration**: notifications when a session ends, an overlay title bar with the
   standard window buttons, and light and dark appearance (follows the system or can be set
   manually). Closing the window keeps the timer running; click the Dock icon to bring it back.
+
+## Download and install
+
+Pixel Pomodoro runs on **Apple Silicon Macs (M1 or newer) with macOS 11 Big Sur or later**. Intel
+Macs aren't supported yet.
+
+### 1. Download the app
+
+Every push to `main` builds the app on GitHub Actions.
+
+1. Open the [**Build** workflow runs](https://github.com/GOGOJO/pixel-pomodoro/actions/workflows/build.yml?query=branch%3Amain) and
+   click the most recent run with a green check mark.
+2. Scroll to **Artifacts** at the bottom of the run page and click
+   **Pixel-Pomodoro-macOS-arm64** to download a zip.
+3. Double-click the zip. It contains `dmg/Pixel Pomodoro_1.0.0_aarch64.dmg` (the installer) and
+   `macos/Pixel-Pomodoro-macOS-arm64.app.zip` (the bare app, if you'd rather skip the
+   installer).
+
+You need to be signed in to GitHub with access to this repository to download artifacts, and
+GitHub deletes them 90 days after a run. If the newest run is older than that, open the
+**Build** workflow and click **Run workflow** to make a fresh build.
+
+With the [GitHub CLI](https://cli.github.com/) you can download the latest build into the
+current folder in one step:
+
+```bash
+gh run download --repo GOGOJO/pixel-pomodoro --name Pixel-Pomodoro-macOS-arm64
+```
+
+### 2. Install it
+
+1. Double-click `Pixel Pomodoro_1.0.0_aarch64.dmg`.
+2. Drag **Pixel Pomodoro** onto the **Applications** folder in the window that opens.
+3. Eject the disk image (the ⏏ button next to it in Finder's sidebar).
+
+### 3. Open it the first time
+
+The app isn't notarized by Apple, so macOS blocks the first launch. You only need to do this
+once:
+
+1. Open **Pixel Pomodoro** from Applications. macOS says it can't verify the developer; click
+   **Done** (or **Cancel**).
+2. Open **System Settings → Privacy & Security**, scroll down to the message about
+   Pixel Pomodoro and click **Open Anyway**, then confirm with your password.
+
+If macOS instead says the app **"is damaged and can't be opened"**, it's the download quarantine
+flag, not real damage. Clear it in Terminal, then open the app normally:
+
+```bash
+xattr -cr "/Applications/Pixel Pomodoro.app"
+```
+
+Allow notifications when asked so you hear about finished sessions even when the window is
+closed.
+
+### Updating and uninstalling
+
+- **Update**: download the newest build and drag it into Applications again, replacing the old
+  copy. Your tasks, settings and history are kept.
+- **Uninstall**: drag the app to the Trash. To also delete your data, remove
+  `~/Library/Application Support/app.pixelpomodoro.desktop/`.
 
 ## Keyboard shortcuts
 
@@ -63,9 +140,9 @@ Outputs (no dev server needed; all assets are embedded):
 The GitHub Actions workflow (`.github/workflows/build.yml`) builds both on an Apple Silicon
 runner, launches the app as a smoke test and uploads the DMG and a zipped `.app` as artifacts.
 
-The bundle is ad-hoc signed, not notarized. The first time you open a downloaded copy, right-click
-the app and choose **Open**, or run `xattr -cr "/Applications/Pixel Pomodoro.app"`. To distribute
-it more widely, set `bundle.macOS.signingIdentity` to your Developer ID and notarize it.
+The bundle is ad-hoc signed, not notarized, so downloaded copies need the first-launch steps in
+[Download and install](#3-open-it-the-first-time). To distribute it more widely, set
+`bundle.macOS.signingIdentity` to your Developer ID and notarize it.
 
 ## Where data lives
 
