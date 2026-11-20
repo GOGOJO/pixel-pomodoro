@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useSettings, type Appearance, type SceneLighting, type Settings } from "../store/settings";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useSettings, type AmbienceSource, type Appearance, type SceneLighting, type Settings } from "../store/settings";
 import { useHistory } from "../store/history";
 import { useTimer } from "../store/timer";
 import { audio } from "../lib/audio";
+import { checkPlayable, deleteCustomAmbience, saveCustomAmbience } from "../lib/customAmbience";
 import { ensureNotificationPermission, notify } from "../lib/notify";
 import { isTauri } from "../lib/platform";
 import { Modal } from "./Modal";
@@ -134,6 +135,106 @@ function Segmented<T extends string>({
   );
 }
 
+const AUDIO_TYPES: Record<string, string> = {
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  wav: "audio/wav",
+  aif: "audio/aiff",
+  aiff: "audio/aiff",
+  flac: "audio/flac",
+  ogg: "audio/ogg",
+};
+
+function AmbienceTrack() {
+  const source = useSettings((s) => s.ambienceSource);
+  const custom = useSettings((s) => s.customAmbience);
+  const set = (patch: Partial<Settings>) => useSettings.getState().update(patch);
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const usingCustom = source === "custom" && custom !== null;
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await checkPlayable(file);
+      await saveCustomAmbience(file);
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+      audio.unlock();
+      set({
+        customAmbience: { name: file.name, type: file.type || AUDIO_TYPES[ext] || "", savedAt: Date.now() },
+        ambienceSource: "custom",
+        ambience: true,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save that file.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async () => {
+    setError(null);
+    try {
+      await deleteCustomAmbience();
+      set({ customAmbience: null, ambienceSource: "builtin" });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't remove the file.");
+    }
+  };
+
+  return (
+    <>
+      <Row label="Ambient track" hint="Yours plays in every world.">
+        <Segmented<AmbienceSource>
+          value={usingCustom ? "custom" : "builtin"}
+          onChange={(v) => {
+            if (v === "custom" && !custom) input.current?.click();
+            else set({ ambienceSource: v });
+          }}
+          options={[
+            { value: "builtin", label: "Built-in" },
+            { value: "custom", label: "My file" },
+          ]}
+        />
+      </Row>
+      {(custom || busy) && (
+        <div className="flex items-center justify-between gap-4">
+          <span className="min-w-0 truncate text-[17px]" style={{ color: "var(--muted)" }} title={custom?.name}>
+            {busy ? "Saving…" : `♪ ${custom?.name}`}
+          </span>
+          <div className="flex flex-none items-center gap-2">
+            <button className="px-btn text-[16px]" style={{ padding: "0 8px" }} disabled={busy} onClick={() => input.current?.click()}>
+              Replace…
+            </button>
+            <button className="px-btn text-[16px]" style={{ padding: "0 8px" }} disabled={busy} onClick={() => void remove()} aria-label="Remove my ambient track">
+              <PixelIcon name="trash" size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p className="m-0 text-[16px]" role="alert" style={{ color: "var(--danger)" }}>
+          {error}
+        </p>
+      )}
+      <input
+        ref={input}
+        type="file"
+        hidden
+        accept="audio/*,.mp3,.m4a,.aac,.wav,.aif,.aiff,.flac,.ogg"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) void upload(file);
+        }}
+      />
+    </>
+  );
+}
+
 export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const s = useSettings();
   const set = (patch: Partial<Settings>) => useSettings.getState().update(patch);
@@ -206,7 +307,14 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
               }}
             />
           </Row>
-          <Row label="Ambient sounds" hint="Rain, wind and fire, café murmur.">
+          <Row
+            label="Ambient sounds"
+            hint={
+              s.ambienceSource === "custom" && s.customAmbience
+                ? "Your own track, on a loop."
+                : "Rain, wind and fire, café murmur."
+            }
+          >
             <input
               type="range"
               className="px-range !w-[110px]"
@@ -230,6 +338,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
               }}
             />
           </Row>
+          <AmbienceTrack />
           <Row label="Desktop notifications">
             <button
               className="px-btn text-[16px]"

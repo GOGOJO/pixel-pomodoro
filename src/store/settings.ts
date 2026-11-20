@@ -6,12 +6,22 @@ import type { TimerConfig } from "../lib/timerEngine";
 export type SceneId = "bedroom" | "cabin" | "cafe" | "city";
 export type Appearance = "system" | "light" | "dark";
 export type SceneLighting = "auto" | "day" | "dusk" | "night";
+export type AmbienceSource = "builtin" | "custom";
+
+/** Describes the user's uploaded ambient track; the audio itself is stored separately. */
+export interface CustomAmbience {
+  name: string;
+  type: string;
+  savedAt: number;
+}
 
 export interface Settings extends TimerConfig {
   sound: boolean;
   volume: number;
   ambience: boolean;
   ambienceVolume: number;
+  ambienceSource: AmbienceSource;
+  customAmbience: CustomAmbience | null;
   notifications: boolean;
   scene: SceneId;
   appearance: Appearance;
@@ -30,6 +40,8 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: 0.6,
   ambience: false,
   ambienceVolume: 0.35,
+  ambienceSource: "builtin",
+  customAmbience: null,
   notifications: true,
   scene: "bedroom",
   appearance: "system",
@@ -51,7 +63,8 @@ export const useSettings = create<SettingsStore>()(
     (set) => ({
       ...DEFAULT_SETTINGS,
       update: (patch) => set(patch),
-      restoreDefaults: () => set({ ...DEFAULT_SETTINGS }),
+      // The uploaded track stays on disk, so its metadata survives a reset.
+      restoreDefaults: () => set((s) => ({ ...DEFAULT_SETTINGS, customAmbience: s.customAmbience })),
     }),
     {
       name: "settings",
