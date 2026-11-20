@@ -1,5 +1,8 @@
 import type { SceneId } from "../store/settings";
 
+/** A scene's built-in ambience, or the user's own uploaded track. */
+export type AmbienceKey = SceneId | "custom";
+
 export type Cue = "focusEnd" | "breakEnd" | "start" | "pause" | "click" | "complete" | "add";
 
 type Note = [freq: number, startBeat: number, beats: number, type?: OscillatorType];
@@ -41,7 +44,9 @@ const CUES: Record<Cue, { bpm: number; notes: Note[]; gain: number }> = {
 class AudioManager {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
-  private ambience: { scene: SceneId; nodes: AudioNode[]; gain: GainNode; stops: (() => void)[] } | null = null;
+  private ambience: { key: AmbienceKey; nodes: AudioNode[]; gain: GainNode; stops: (() => void)[] } | null = null;
+  private wanted: AmbienceKey | null = null;
+  private customTrack: Blob | null = null;
   volume = 0.6;
   ambienceVolume = 0.35;
 
@@ -112,16 +117,36 @@ class AudioManager {
     return buf;
   }
 
-  /** Starts (or switches) the looping ambient bed for a scene; pass null to stop. */
-  setAmbience(scene: SceneId | null) {
-    if (this.ambience && this.ambience.scene === scene) return;
+  /** Sets the uploaded track used by the "custom" ambience; restarts it if it's playing. */
+  setCustomTrack(track: Blob | null) {
+    if (track === this.customTrack) return;
+    this.customTrack = track;
+    if (this.wanted === "custom") {
+      this.stopAmbience();
+      this.startAmbience("custom");
+    }
+  }
+
+  /** Starts (or switches) the looping ambient bed; pass null to stop. */
+  setAmbience(key: AmbienceKey | null) {
+    this.wanted = key;
+    if (this.ambience && this.ambience.key === key) return;
     this.stopAmbience();
-    if (!scene) return;
+    if (key) this.startAmbience(key);
+  }
+
+  /** Built-in beds are synthesized loud, so they sit lower than a user's mixed track. */
+  private ambienceLevel(key: AmbienceKey) {
+    return this.ambienceVolume * (key === "custom" ? 0.8 : 0.5);
+  }
+
+  private startAmbience(key: AmbienceKey) {
+    if (key === "custom" && !this.customTrack) return;
     const ctx = this.ensure();
     if (!ctx || !this.master) return;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(this.ambienceVolume * 0.5, ctx.currentTime + 1.5);
+    gain.gain.linearRampToValueAtTime(this.ambienceLevel(key), ctx.currentTime + 1.5);
     gain.connect(this.master);
     const nodes: AudioNode[] = [gain];
     const stops: (() => void)[] = [];
@@ -154,14 +179,30 @@ class AudioManager {
       nodes.push(o, g);
     };
 
-    if (scene === "bedroom" || scene === "city") {
+    if (key === "custom" && this.customTrack) {
+      const url = URL.createObjectURL(this.customTrack);
+      const el = new Audio(url);
+      el.loop = true;
+      const src = ctx.createMediaElementSource(el);
+      src.connect(gain);
+      nodes.push(src);
+      void el.play().catch(() => {
+        /* retried on the first click by AudioManager's unlock handler */
+      });
+      stops.push(() => {
+        el.pause();
+        el.removeAttribute("src");
+        el.load();
+        URL.revokeObjectURL(url);
+      });
+    } else if (key === "bedroom" || key === "city") {
       // Rain on glass: pink noise with the lows trimmed, plus a soft low rumble.
-      loop("pink").connect(filter("highpass", 400)).connect(filter("lowpass", scene === "city" ? 3500 : 6000)).connect(gain);
+      loop("pink").connect(filter("highpass", 400)).connect(filter("lowpass", key === "city" ? 3500 : 6000)).connect(gain);
       const rumble = ctx.createGain();
-      rumble.gain.value = scene === "city" ? 0.9 : 0.5;
+      rumble.gain.value = key === "city" ? 0.9 : 0.5;
       nodes.push(rumble);
       loop("brown").connect(filter("lowpass", 180)).connect(rumble).connect(gain);
-    } else if (scene === "cabin") {
+    } else if (key === "cabin") {
       // Wind through pines with slow gusts, and a crackling fire.
       const wind = filter("bandpass", 500, 0.6);
       const windGain = ctx.createGain();
@@ -182,7 +223,7 @@ class AudioManager {
         setTimeout(pop, 60 + Math.random() * 400);
       };
       setTimeout(pop, 300);
-    } else if (scene === "cafe") {
+    } else if (key === "cafe") {
       // Murmur of a quiet room and the occasional cup clink.
       const murmur = filter("bandpass", 350, 1.2);
       loop("brown").connect(murmur).connect(gain);
@@ -207,12 +248,14 @@ class AudioManager {
       };
       setTimeout(clink, 2500);
     }
-    this.ambience = { scene, nodes, gain, stops };
+    this.ambience = { key, nodes, gain, stops };
   }
 
   setAmbienceVolume(v: number) {
     this.ambienceVolume = v;
-    if (this.ambience && this.ctx) this.ambience.gain.gain.setTargetAtTime(v * 0.5, this.ctx.currentTime, 0.2);
+    if (this.ambience && this.ctx) {
+      this.ambience.gain.gain.setTargetAtTime(this.ambienceLevel(this.ambience.key), this.ctx.currentTime, 0.2);
+    }
   }
 
   private stopAmbience() {

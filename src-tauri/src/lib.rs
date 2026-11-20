@@ -49,6 +49,59 @@ fn save_data(
     fs::rename(&tmp, &path).map_err(|e| e.to_string())
 }
 
+const MAX_AMBIENCE_BYTES: usize = 200 * 1024 * 1024;
+
+fn ambience_file(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("custom-ambience.audio"))
+}
+
+/// Stores the user's own ambient track. The body is the raw file bytes.
+#[tauri::command]
+fn save_ambience(
+    app: AppHandle,
+    lock: State<'_, StorageLock>,
+    request: tauri::ipc::Request<'_>,
+) -> Result<(), String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("expected raw audio bytes".into());
+    };
+    if bytes.is_empty() || bytes.len() > MAX_AMBIENCE_BYTES {
+        return Err("audio file must be between 1 byte and 200 MB".into());
+    }
+    let path = ambience_file(&app)?;
+    let _guard = lock.0.lock().map_err(|e| e.to_string())?;
+    let tmp = path.with_extension("audio.tmp");
+    {
+        let mut file = fs::File::create(&tmp).map_err(|e| e.to_string())?;
+        file.write_all(bytes).map_err(|e| e.to_string())?;
+        file.sync_all().map_err(|e| e.to_string())?;
+    }
+    fs::rename(&tmp, &path).map_err(|e| e.to_string())
+}
+
+/// Returns the stored ambient track, or an empty body when there is none.
+#[tauri::command]
+fn load_ambience(app: AppHandle) -> Result<tauri::ipc::Response, String> {
+    let path = ambience_file(&app)?;
+    match fs::read(&path) {
+        Ok(bytes) => Ok(tauri::ipc::Response::new(bytes)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(tauri::ipc::Response::new(Vec::new())),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn delete_ambience(app: AppHandle, lock: State<'_, StorageLock>) -> Result<(), String> {
+    let path = ambience_file(&app)?;
+    let _guard = lock.0.lock().map_err(|e| e.to_string())?;
+    match fs::remove_file(&path) {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.to_string()),
+        _ => Ok(()),
+    }
+}
+
 #[tauri::command]
 fn data_dir(app: AppHandle) -> Result<String, String> {
     app.path()
@@ -62,7 +115,14 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .manage(StorageLock(Mutex::new(())))
-        .invoke_handler(tauri::generate_handler![load_data, save_data, data_dir])
+        .invoke_handler(tauri::generate_handler![
+            load_data,
+            save_data,
+            data_dir,
+            save_ambience,
+            load_ambience,
+            delete_ambience
+        ])
         .on_window_event(|window, event| {
             // macOS convention: the red close button hides the window and the timer keeps
             // running; clicking the Dock icon brings it back, Cmd+Q quits.
