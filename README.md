@@ -34,7 +34,10 @@ Built with **Tauri 2**, **React**, **TypeScript**, **Vite**, **Tailwind CSS** an
   completed focus session is credited to the current task.
 - **Stats**: today's pomodoros and focus time, a day streak, all-time total and a 7-day chart.
 - **Sound**: chiptune cues and optional ambient sound (rain, wind and fire, café murmur), all
-  synthesized with Web Audio, so the app ships no audio files.
+  synthesized with Web Audio, so the app ships no audio files. Prefer your own background
+  audio? In Settings → Ambient track, choose **My file** and pick an MP3, M4A, WAV, AIFF or FLAC
+  (up to 200 MB). It loops in every world, uses the same volume slider, and is copied into the
+  app's data folder so it keeps working if you move or delete the original.
 - **Native macOS integration**: notifications when a session ends, an overlay title bar with the
   standard window buttons, and light and dark appearance (follows the system or can be set
   manually). Closing the window keeps the timer running; click the Dock icon to bring it back.
@@ -161,7 +164,8 @@ The bundle is ad-hoc signed, not notarized, so downloaded copies need the first-
 
 Settings, tasks, session history and the running timer are saved as JSON files in
 `~/Library/Application Support/app.pixelpomodoro.desktop/`. Writes are atomic: each file is
-written to a temp file, then renamed.
+written to a temp file, then renamed. A custom ambient track is stored next to them as
+`custom-ambience.audio`.
 
 ## Project layout
 
